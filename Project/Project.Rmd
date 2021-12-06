@@ -1,0 +1,164 @@
+---
+title: "Project"
+subtitle: "STAE04/DABN19: Data Visualization"
+author: "Dirk Baars"
+date: "`r Sys.Date()`"
+papersize: a4
+geometry: margin=4cm
+colorlinks: true
+output:
+  pdf_document:
+    number_sections: true
+---
+
+# Introduction
+
+The HR Dataset was designed by Drs. Rich Huebner and Carla Patalano to accompany a case study designed for graduate HR students studying HR metrics, measurement, and analytics. The first version of the data stems from 2017, and the data used for this project is the fourth version, which stems from 2020. 
+The dataset is synthetic, created specifically to go along with the case study. The data revolves around a fictitious company and the core data set contains names, DOBs, age, gender, marital status, date of hire, reasons for termination, department, whether they are active or terminated, position title, pay rate, manager name, and performance score. The original data set contains 36 variables and 311 observations. The dataset can be obtained [here](https://www.kaggle.com/rhuebner/human-resources-data-set).
+
+The data set contains an interesting variable, namely the absence of work. Absence of work has possible severe effects, such as inadequate staffing, which in turn may lead to increased employee stress levels ([SHRM](https://www.businesswire.com/news/home/20141215005773/en/SHRM-and-Kronos-Examine-How-Employee-Absences-Impact-Organizations-and-Their-Workforces-Around-the-World1)) Therefore it is interesting to look at the variables that might influence on the absence of work. The question for this research is:
+
+\
+
+**"What variables have effect on absence of work?"**
+
+\
+
+In this assignment, we will mostly focus on the visualization of this research question, where we will dive deeper into the variables of Salary, Recruitment Source, Work Performance and Sex. Descriptions of the variables can be found in the table below: 
+
+\
+\
+\
+\
+\
+
+Table: *Description of HR dataset.* 
+
+| Name              | Type |Measurement | Description                      |
+| :---              | :--- | :---        | :---                             |
+| Salary            | Integer | $ U.S. Dollars     | The person’s yearly salary                  |
+| Absences          | Integer | number of times Absent    | The number of times the employee was absent from work.|
+| RecruitmentSource | Character | 7 different platforms, with an 8th 'others' option | The name of the recruitment source where the employee was recruited from  |
+| PerformanceScore  | Character | (Fully Meets, Partially Meets, PIP, Exceeds) | Performance Score text/category          |
+| Sex | Character | M = Male, F = Female | Sex | 
+
+Some additions have been made before using the data for the analyses.PerformanceScore is not ordered in the data, where it should be clearly ordered. It ranges from (Performance Improvement Plan (PIP), Partially Meets, Fully Meets, and Exceeds. Whereby PIP means 'helping employees who are not meeting job performance goals'. Ordering the variabls is done by mutating the variable and relevel with fct_relevel(), and then ordering the variable with the as.ordered() function. 
+
+```{r, include = FALSE}
+
+data.HR <- read.csv("HRDataset_v14.csv")
+
+library(tidyverse)
+library(dplyr)
+
+data.HR <- data.HR %>%
+  mutate(PerformanceScore = fct_relevel(as.ordered(PerformanceScore), "PIP", "Needs Improvement", "Fully Meets", "Exceeds")) 
+
+data.HR <- data.HR %>%
+mutate(Sex = case_when(
+    as.character(Sex) %in% "M " ~ "Male",
+    as.character(Sex) %in% "F" ~ "Female",
+    TRUE ~ as.character(Sex)
+    )
+  )
+
+
+
+```
+
+# Analyses 
+
+First, let's examine the data. We examine the data of absenteeism against the work performance in a boxplot. A boxplot plot gives information about the distribution of the data showing the outliers, the median and the quartiles, which is in this case, gives more in-depth information than e.g. a violin plot. A sequential color scheme is added to the boxplot because the variable of Performance Levels is of ordinal origin. This has been done by adding scale_fill_ordinal().
+
+```{r, echo = F, fig.cap = "*Boxplot of the amount of absence days and the performance levels of the employees.*", fig.width = 8, fig.height = 3.7}
+
+data.HR %>%
+  ggplot(aes(Absences, PerformanceScore, fill = PerformanceScore)) +
+  geom_boxplot() +   labs(x = "Absent Days", y ="Performance Levels") +
+  theme(legend.position = "none") +
+  scale_fill_ordinal()
+
+```
+
+In the boxplot (Figure 1), one outlier is noticed, in the PIP level. This employee has had 20 absence days. We keep the outlier in the data because we do not want to lose valuable data from the set. The employees who need improvement have the highest median of absence. The employees who are working with PIP have the lowest amount of absenteeism. 
+
+\
+\
+\
+\
+\
+\
+\
+
+
+To further examine the relationship between work performance and absenteeism, a scatterplot is created with geom_point between the variables 'Absences' and 'PerformanceScore'. Hereby the points have been made  transparent with the function 'alpha' and the value points are 'jittered' to prevent overlap. A line between the data points has been added with the help of 'geom_line()', whereby a "gam" smoother is used because there are < 1,000 observations. The line of geom_smooth has a shaded area, which resembles a 95% confidence interval. 
+
+
+```{r, echo = F, fig.cap = "*For every performance level, the amount of salary and days of absence have a positive relation.*", fig.width = 8, fig.height = 3.7}
+
+data.HR %>%
+  ggplot(aes(x = Absences,
+             y = Salary)) +
+  labs(x = 'Absent Days', 
+       y = 'Salary') +
+  geom_point(alpha = 0.2, position = position_jitter()) +
+  geom_smooth(formula = y ~ x, method = "gam", se=T) +
+  facet_wrap('PerformanceScore')
+
+
+
+```
+
+In the scatterplot (Figure 2) it can be noticed that there are a few employees that have higher salary than the others. E.g. in the performance pool that 'exceeds' one can see that there are approximately 6 variables outside of the confidence interval, whereby the biggest earner has a salary of approximately 225000 Dollars per year. 
+
+Furthermore, there tends to be a positive relationship between the salary level and the absenteeism of work. It shows that for every performance level, the more you earn, the higher the number of absent days.
+
+Thirdly, one could check if there if the number of absence days might be related to the ways of Recruitment. This is done by creating a density plot. The days of absence can be seen on the x-axis, whilst the density plot is 'filled' with the source of recruitment. Also, a qualitative palette is chosen, because the sources of recruitment do not signal differences in magnitude, this has been done by adding the function: scale_fill_discrete(). Also, a geom_rug has been added, showing the marginal distribution for days of absence. 
+
+```{r, echo = F, fig.cap = "*The Source of Recruitment against the amount of absence in days, a density plot.*", fig.width = 8, fig.height = 3.7}
+
+library(ggrepel)
+library(ggmosaic)
+
+data.HR %>%  
+  ggplot(aes(Absences, fill = RecruitmentSource)) + 
+  labs(x = 'Absent Days') +
+  geom_density(position ="fill", col ="white") + 
+  geom_rug(alpha=0.5) +
+  scale_fill_discrete(name = "Source of Recruitment") 
+```
+
+In the density plot (Figure 3), one can see that for a low amount of absence days, employees had a high density to be recruited from Indeed, and other ways of recruitment. When employees had a high amount of absence days, they tend to be sourced from Google Search and Online Web applications. 
+
+
+Lastly, we can check if sex has an influence on the days of absence. This has been done by creating a mosaic graph. The main benefit of a mosaic plot is that we get to see more of the data then a regular bar chart. E.g. with a bar chart, we need to separate visualizations to provide information on the overall size of groups, whereas with the mosaic plot we can make do with only a single plot. To use the days of absence in a mosaic table, the variable is cut into three levels via the function cut_interval(), where they are ordinal in level. Therefore, we make use of the 'scale_fill_ordinal()' function, because the levels of absence are ordered.  
+
+```{r =, echo = F, fig.cap = "*The levels of absence against salary and sex, a mosaic graph.*", fig.width = 8, fig.height = 3.7}
+
+data.HR2 <- data.HR %>%
+  mutate(Absence_levels = cut_interval(Absences, 3, labels = c("Low Absence", "Average Absence", "High Absence")))
+  
+  data.HR2 %>%
+  ggplot() +
+geom_mosaic(aes(x=product(Sex), fill = Absence_levels)) +
+  labs(
+    x = "Sex", 
+    y = "Levels of Absent Days"
+  ) +
+    scale_fill_ordinal() + 
+    theme(legend.position = "none")
+
+
+```
+
+
+
+The mosaic table can be found in figure 4. In the mosaic table, it can be seen that females have a higher amount of low absence and high absence than men, whilst men have a higher amount of average absence in the job. No clear conclusions can be drawn from this mosaic table. 
+
+# Conclusion
+
+In general, one can argue that the employees who need to improve their level of performance have the highest median of absent days. Also for every level of performance, the more salary one earns, the higher the number of absence days. For the sourcing platform counts, employees with the highest amount of absence days are sourced via Google Search and Online Web application, and the employees with the lowest amount of absent days are sourced via Indeed and other ways of recruitment. Female employees also tend to have a higher amount of both high levels of absenteeism, as well as low levels, whilst male employees have a higher average level of absenteeism. Further research can look into these relationships to see if absent days can be influenced, which can possibly lead to lower stress levels in the work place. 
+
+
+
+

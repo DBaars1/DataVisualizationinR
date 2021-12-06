@@ -1,0 +1,123 @@
+---
+title: "Assignment 3"
+subtitle: "STAE04/DABN19: Data Visualization"
+author: "Dirk Baars"
+date: "`r Sys.Date()`"
+papersize: a4
+geometry: margin=4cm
+colorlinks: true
+output:
+  pdf_document:
+    number_sections: true
+---
+
+# Task 1
+
+The data set contains panel data of 595 observations, that was collected between 1976 and 1982 in the United States. The total numbers of observations are: 4165. The Wages data set contains 12 variables, whereby one variable is added, by taking the inverse log of lwages. 
+
+The Description of the variables are as follows: 
+
+| Name    | Transformation| Measurement | Description                      |
+| :---    | :---          | :---        | :---                             |
+| exp     | ---           | years       | years of full-time experience    |
+| wks     | ---           | weeks       | weeks worked                     |
+| bluecol | ---           | yes, no     | blue collar?                     |
+| ind     | ---           | yes, no     | works in a manufacturing industry ?  |
+| south   | ---           | yes, no     | resides in the south ?           |
+| smsa    | ---      | yes, no | resides in a standard metropolitan statistical are ?  |
+| married | ---           | yes, no     | married ?                        |
+| sex     | ---           | male, female| sex of the person                |
+| union   | ---           | yes, no     | individual’s wage set by a union contract ? |
+| ed      | ---           | years       | years of education               |
+| POC     | ---           | yes, no     | is the individual person of color ? |
+| lwage   | log transformation| logarithm  | logarithm of wage             |
+| wage    | ---           | ---         | wage in month                    |
+```{r, include = FALSE}
+
+library(tidyverse)
+library(Ecdat)
+library(ggmosaic)
+Wages1 <- Wages %>%
+  mutate(wage = exp(lwage)) 
+
+Wages1 %>%
+  ggplot(aes(exp, wage, alpha = 0.2)) +
+  geom_point() +
+  geom_jitter(position = position_jitter(width = 0.2, height = 0))
+
+```
+
+
+
+The graph below shows a relation between the years of experience, and the wage per month. A geom_point() is used to visualize the graph.To prevent overlapping, the position is jittered, and opacity (alpha = 0.5) is adjusted. Also, a logarithmic scale is adjusted to give a better overview of the data. Also, a line is added by using geom_smooth(). The graph shows that until approximately 30 years of working experience, the wage seems to increase, and after that the wages slowly decreases. 
+```{r, fig.cap = "The relation between wages and years of experience. Points are jittered", fig.width = 5, fig.height = 3}
+
+  Wages1 %>%
+  ggplot(aes(exp, wage, alpha = 0.5)) +
+  geom_point(position = position_jitter()) +
+  labs(
+    x = "Years of Work Experience", 
+    y = "Wage per Month in USD"
+  ) + 
+  geom_smooth() +
+  scale_y_log10() 
+ 
+
+```
+
+# Task 2
+
+The graph below shows a relation between the logarithmic wage, and the weeks worked. The weeks worked is filtered, so only >=40 weeks is taken into account. A geom_point() is used to visualize the graph.To prevent overlapping, the position is jittered, and opacity (alpha = 0.5) is adjusted. Also, a the logarithmic wage is used to give a better overview of the data. Also, a line is added by using geom_smooth().
+
+In the figure it shows a pattern, whereby wage remains fairly stable in comparison to the weeks worked. 
+
+```{r, fig.cap = "The amount of weeks worked has a positive relation to wage. Points are jittered", fig.width = 5, fig.height = 3}
+Wages1 %>%
+  filter(wks >= 40) %>%
+  ggplot(aes(wks, lwage, alpha = 0.5)) +
+  geom_point(position = position_jitter(width = 1, height = 1)) +
+  geom_smooth() + 
+  labs(
+    x = "Weeks Worked",
+    y = "Log of montly Wage in USD"
+  ) 
+
+
+```
+
+# Task 3
+
+```{r, include = FALSE}
+Wages2 <-
+  Wages1 %>%
+  mutate(wage_levels = cut(
+    wage,
+    c(0, 750, 1500, max(wage)),
+    labels = c("Low", "Mid", "High")
+  ))
+```
+
+
+When plotting sex against wage levels in a mosaic table, it is visible that most people are earning a low level of wage per month. then regarding proportion, with every level of wage, females are declining in participation of level.  
+```{r, fig.cap = "Wage levels per sex", fig.width = 5, fig.height = 3}
+
+Wages2 %>%
+  ggplot() +
+geom_mosaic(aes(x=product(wage_levels), fill = sex)) +
+  labs(
+    x = "Wage levels", 
+    y = "Sex"
+  )
+
+```
+
+```{r, include = FALSE}
+Wages2 %>%
+  ggplot(aes(wage_levels, fill = sex)) +
+  geom_bar(position="dodge")
+```
+
+
+
+
+

@@ -1,0 +1,116 @@
+---
+title: "Assignment 1"
+subtitle: "DABN19: Data Visualization"
+author: "Dirk Baars"
+date: "`r Sys.Date()`"
+papersize: a4
+geometry: margin=4cm
+colorlinks: true
+output:
+  pdf_document:
+    number_sections: true
+---
+
+```{r setup, include = FALSE}
+# Setup options for R Markdown
+knitr::opts_chunk$set(
+  echo       = TRUE,    # Do not print code
+  warning    = FALSE,    # Suppress warnings
+  message    = FALSE,    # Suppress messages
+  fig.align  = "center", # Center figures
+  fig.width  = 2.7,      # Good standard figure width for single-panel figures
+  fig.height = 2.4       # Good standard figure height for single-panel figures
+)
+
+library(tidyverse)
+
+# Set a theme for ggplot2
+theme_set(theme_grey(base_size = 10))
+
+# Set options
+options(
+  digits = 3, # limit the number of significant digits
+  width  = 63 # limit the width of code output
+)
+```
+
+# Task 1
+
+First, the data is filtered, whereby only Tatooine homeworld is 
+chosen, via the filter() command. Then, the missing cases are 
+deleted via the drop_na() command, and finally the data is grouped 
+by eye color via grouped_by(), so finally the average mean is calculated 
+via the summarize function per group.
+
+```{r bar chart1, fig.cap= 'Average weight of Tatooine character by eye color'}
+starwars_tatooine_summary <- 
+  starwars %>%
+  filter(homeworld == "Tatooine") %>%
+  drop_na(mass) %>%
+  group_by(eye_color) %>%
+  summarize(avg_mass = mean(mass))
+
+ggplot(starwars_tatooine_summary, aes(eye_color, avg_mass)) +
+  geom_col() +
+  xlab("Eye Color") +
+  ylab("Average Weight")
+
+```
+
+
+
+
+
+
+
+# Task 2
+
+2.1 The data in table4a is not tidy, because each
+variable does not have its own column (year and tuberculosis cases)
+and each observation does not have its own row.
+2.2 In table 4a there are the following variables: Country, year and cases of tuberculosis. 
+
+To make the data tidy, it is pivoted in a longer way by using pivot_longer(),
+whereby the column names are merged into one variable 'year' 
+and the values all got their own row under the column 
+cases.tuberculosis and are separated by years.
+
+```{r table1, echo=TRUE}
+table4a_tidy <- table4a %>%
+  pivot_longer(
+    cols = c("1999", "2000"),
+    names_to = "year", 
+    values_to = "cases.tuberculosis"
+  )
+
+knitr::kable(table4a_tidy, digits = 5, format.args = list(scientific=
+FALSE,big.mark=","),caption = 
+'Tuberculosis cases in three countries across two years')
+```
+
+# Task 3
+
+Finally, table 4b is also made tidy in the same matter
+as table 4a. Then the two are joined via left_join().
+Since the column names are similar, no 'by =' is used.
+After that a new column is created via mutate(), 
+calculating the rate of tuberculosis.
+
+```{r table2, echo=TRUE}
+table4b_tidy <- table4b %>%
+  pivot_longer(
+    cols = c("1999", "2000"),
+    names_to = "year", 
+    values_to = "population"
+  )
+
+table4 <- left_join(table4a_tidy, table4b_tidy) %>%
+  mutate(rate = cases.tuberculosis/population )
+
+knitr::kable(table4, digits = 5, format.args = list(scientific=FALSE, 
+big.mark=","),caption = 'Tuberculosis cases in 
+three countries across two years, including 
+populations numbers and tuberculosis rate.')
+```
+
+
